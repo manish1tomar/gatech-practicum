@@ -1,9 +1,12 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+import requests
 
 key="BXWL0nYXpDhyohFV5MeZZf91tlSyHb3J34offV7UsSC5N3BX4OVIJQQJ99BAACYeBjFXJ3w3AAAaACOGs4uk"
-st.write("key", key)
+data = requests.post(url="https://language-gatech.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=Project-gatech&api-version=2021-10-01&deploymentName=production", )
+st.write(data)
+
 #Add title of app
 st.title('FCS Chatbot OnePal')
 
@@ -50,4 +53,3 @@ st.chat_message("user")
 st.write("Hi there !! This is OnePal, I’m here to help!")
 st.chat_input("What do you want to talk about ?")
 
-st.components("https://language-gatech.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=Project-gatech&api-version=2021-10-01&deploymentName=production")
