@@ -1,5 +1,9 @@
 import streamlit as st
+import numpy as np
+import pandas as pd
 
+key="BXWL0nYXpDhyohFV5MeZZf91tlSyHb3J34offV7UsSC5N3BX4OVIJQQJ99BAACYeBjFXJ3w3AAAaACOGs4uk"
+st.write("key", key)
 #Add title of app
 st.title('FCS Chatbot OnePal')
 
@@ -32,4 +36,18 @@ sd_bar = st.sidebar.selectbox("How would like to be contacted ?", ('Email','Mobi
 st.text_input(f'Enter your {contact_option}')
 
 #Add a file uploader
-uploaded_file = st.file_uploader("Upload the file", type="csv")
+#uploaded_file = st.file_uploader("Upload the file", type="csv")
+uploaded_file = st.sidebar.file_uploader("Upload the file", type="csv")
+
+#Line chart
+#==============================================================================================================#
+data = pd.DataFrame({"S.No.": list(range(1,11))
+                    ,"Value": np.array(list(range(10,101,10)))})
+st.line_chart(data)
+#==============================================================================================================#
+
+st.chat_message("user")
+st.write("Hi there !! This is OnePal, I’m here to help!")
+st.chat_input("What do you want to talk about ?")
+
+st.components("https://language-gatech.cognitiveservices.azure.com/language/:query-knowledgebases?projectName=Project-gatech&api-version=2021-10-01&deploymentName=production")
