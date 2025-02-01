@@ -2,7 +2,7 @@ from azure.core.credentials import AzureKeyCredential
 from azure.ai.language.questionanswering import QuestionAnsweringClient
 
 endpoint = "https://eastus.api.cognitive.microsoft.com/"
-credential = "BXWL0nYXpDhyohFV5MeZZf91tlSyHb3J34offV7UsSC5N3BX4OVIJQQJ99BAACYeBjFXJ3w3AAAaACOGs4uk"
+credential = ""
 knowledge_base_project = "Project-gatech"
 api_version="2021-10-01"
 deploymentName="production"
