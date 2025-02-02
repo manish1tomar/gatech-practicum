@@ -10,7 +10,7 @@ deploymentName="production"
 
 client = QuestionAnsweringClient(endpoint, AzureKeyCredential(credential))
 
-output = asyncio.run( client.get_answers(question="Hi"
+output = asyncio.run( client.get_answers(question="How many academic units must I complete to be considered for regular freshman admission to a USG college or university?"
                             , project_name=knowledge_base_project
                             , deployment_name=deploymentName)
              )
