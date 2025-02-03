@@ -1,51 +1,40 @@
-import streamlit as st
-import numpy as np
-import pandas as pd
-import requests
+from flask import Flask, request, jsonify
+import os, set_env
+#import kbQnA
+from flask_cors import CORS  # Enable CORS for frontend requests
+from azure.core.credentials import AzureKeyCredential
+from azure.ai.language.questionanswering import QuestionAnsweringClient
 
-#Add title of app
-st.title('FCS Chatbot OnePal')
+app = Flask(__name__)
+CORS(app)  # Allow cross-origin requests
 
-#Add simple text
-st.write("Hi there !! This is OnePal, I’m here to help!")
+def initialize_client():
+    """Initialize Azure Language Studio QA client."""
+    endpoint = str(os.getenv("endpoint"))
+    #credential = DefaultAzureCredential()
+    credential = AzureKeyCredential(str(os.getenv("key")))
+    return QuestionAnsweringClient(endpoint, credential)
 
-#user input
-number = st.slider('What is your feedback on a scale of 1-5, being the highest.',1,5)
-if number >= 4:
-    st.write("Thanks for your feedback", number, "is great")
-else:
-    st.write("Thanks for your feedback", number, "means I need to learn more & improve.")
+client = initialize_client()
+project_name = os.getenv("knowledge_base_project")
+deployment_name = os.getenv("deploymentName")
 
-#Add a button
-if st.button('Say Hello !'):
-    st.write("Hi there !! This is OnePal, I’m here to help!")
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    question = data.get("question", "")
 
-#Add radio button
-genre = st.radio("What do you want to talk about ?", ('Graduation Requirements', 'Career Advise', 'Support resources'))
-st.write(f"Sure, lets talk about {genre}")
+    if not question:
+        return jsonify({"error": "No question provided"}), 400
 
-#Add a dropdown
-contact_option = st.selectbox("How would like to be contacted ?", ('Email ','Mobile Phone ','Home Phone '))
+    response = client.get_answers(
+        question=question,
+        project_name=project_name,
+        deployment_name=deployment_name
+    )
 
-#Add a sidebar
-sd_bar = st.sidebar.selectbox("How would like to be contacted ?", ('Email','Mobile Phone','Home Phone'))
+    answer = response.answers[0].answer if response.answers else "Sorry, I couldn't find an answer."
+    return jsonify({"response": answer})
 
-#Add text input
-#st.sidebar.text_input(f'Enter your {contact_option}')
-st.text_input(f'Enter your {contact_option}')
-
-#Add a file uploader
-#uploaded_file = st.file_uploader("Upload the file", type="csv")
-uploaded_file = st.sidebar.file_uploader("Upload the file", type="csv")
-
-#Line chart
-#==============================================================================================================#
-data = pd.DataFrame({"S.No.": list(range(1,11))
-                    ,"Value": np.array(list(range(10,101,10)))})
-st.line_chart(data)
-#==============================================================================================================#
-
-st.chat_message("user")
-st.write("Hi there !! This is OnePal, I’m here to help!")
-st.chat_input("What do you want to talk about ?")
-
+if __name__ == '__main__':
+    app.run(debug=True)

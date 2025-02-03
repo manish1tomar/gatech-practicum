@@ -1,9 +1,10 @@
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.language.questionanswering.aio import QuestionAnsweringClient
-import asyncio, os, set_env
+import asyncio, os
 
 endpoint = "https://eastus.api.cognitive.microsoft.com/"
 credential = str(os.environ.get('key'))
+print(type(credential), credential)
 knowledge_base_project = "abc"
 api_version="2021-10-01"
 deploymentName="production"
