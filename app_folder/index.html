@@ -6,28 +6,61 @@
     <title>Chatbot</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        #chatbox { width: 80%; max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: auto; }
-        #userInput { width: 80%; padding: 10px; margin-top: 10px; }
-        button { padding: 10px; }
+        #chatbox { width: 80%; max-width: 600px; margin: auto; border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; background: #f9f9f9; }
+        #userInput, #sendMessageBtn { width: 40%; padding: 10px; margin-top: 10px; }
+        button { padding: 10px; cursor: pointer; }
+        input { padding: 10px; margin: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>Azure Knowledge Base Chatbot</h1>
+    <img src="onePal image.jpg" width="350">
+    <h1>onePal here !! Ask me anything.</h1>
+
+    <!-- Student Details Form -->
+    <input type="text" id="studentID" placeholder="Student ID" />
+    <input type="text" id="firstName" placeholder="First Name" />
+    <input type="text" id="lastName" placeholder="Last Name" />
+    <button onclick="enableChat()">Submit</button>
+
+    <!-- Chatbox Section -->
     <div id="chatbox"></div>
-    <input type="text" id="userInput" placeholder="Type a message..." />
-    <button onclick="sendMessage()">Send</button>
+    <input type="text" id="userInput" placeholder="Type a message..." disabled />
+    <button id="sendMessageBtn" onclick="sendMessage()" disabled>Send</button>
 
     <script>
+        function enableChat() {
+            const studentID = document.getElementById("studentID").value.trim();
+            const firstName = document.getElementById("firstName").value.trim();
+            const lastName = document.getElementById("lastName").value.trim();
+
+            if (!studentID || !firstName || !lastName) {
+                alert("Please enter all details before starting the chat.");
+                return;
+            }
+
+            // Enable the chatbox
+            document.getElementById("userInput").disabled = false;
+            document.getElementById("sendMessageBtn").disabled = false;
+
+            // Display welcome message
+            const chatbox = document.getElementById("chatbox");
+            chatbox.innerHTML = `<p><strong>OnePal:</strong> Hi ${firstName}! How can I assist you today?</p>`;
+        }
+
         document.getElementById("userInput").addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {  // Check if Enter key is pressed
-                event.preventDefault();  // Prevent form submission (optional)
-                sendMessage();  // Call the send message function
+            if (event.key === "Enter") {
+                event.preventDefault();
+                sendMessage();
             }
         });
+
         async function sendMessage() {
             const inputField = document.getElementById("userInput");
             const chatbox = document.getElementById("chatbox");
+            const studentID = document.getElementById("studentID").value.trim();
+            const firstName = document.getElementById("firstName").value.trim();
+            const lastName = document.getElementById("lastName").value.trim();
             let userMessage = inputField.value.trim();
 
             if (!userMessage) return;
@@ -38,7 +71,12 @@
             const response = await fetch("http://127.0.0.1:5000/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ question: userMessage })
+                body: JSON.stringify({
+                    studentID,
+                    firstName,
+                    lastName,
+                    question: userMessage
+                })
             });
 
             const data = await response.json();

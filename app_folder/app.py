@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 import os, set_env
-#import kbQnA
 from flask_cors import CORS  # Enable CORS for frontend requests
 from azure.core.credentials import AzureKeyCredential
 from azure.ai.language.questionanswering import QuestionAnsweringClient
@@ -11,7 +10,6 @@ CORS(app)  # Allow cross-origin requests
 def initialize_client():
     """Initialize Azure Language Studio QA client."""
     endpoint = str(os.getenv("endpoint"))
-    #credential = DefaultAzureCredential()
     credential = AzureKeyCredential(str(os.getenv("key")))
     return QuestionAnsweringClient(endpoint, credential)
 
