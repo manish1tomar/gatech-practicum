@@ -17,6 +17,19 @@ client = initialize_client()
 project_name = os.getenv("knowledge_base_project")
 deployment_name = os.getenv("deploymentName")
 
+@app.route('/validate_student', methods=['POST'])
+def validate_student():
+    data = request.json
+    studentID = data.get("studentID")
+    firstName = data.get("firstName")
+    lastName = data.get("lastName")
+
+    #if check_student_in_db(studentID, firstName, lastName):
+    #    return jsonify({"valid": True})
+    #else:
+    #    return jsonify({"valid": False})
+    return jsonify({"valid": True})
+
 @app.route('/chat', methods=['POST'])
 def chat():
     data = request.json

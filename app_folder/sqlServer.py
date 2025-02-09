@@ -25,7 +25,7 @@ try:
     cursor = conn.cursor()
 
     # Example query
-    cursor.execute("SELECT name, database_id, create_date FROM sys.databases;")
+    cursor.execute("SELECT TOP (1000) [SchoolCalendarId],[CalendarName]  FROM [dbo].[Enrollment];")
 
     # Fetch and print results
     for row in cursor.fetchall():
