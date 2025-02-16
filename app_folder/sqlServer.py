@@ -16,7 +16,7 @@ conn_str = (
     #"TrustServerCertificate=yes;"  # Use this if encryption issues might occur
 )
 
-'''
+
 # Establish connection
 try:
     conn = pyodbc.connect( conn_str )
@@ -38,4 +38,3 @@ try:
 
 except Exception as e:
     print("Error connecting to SQL Server:", e)
-'''
