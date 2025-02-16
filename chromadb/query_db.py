@@ -31,8 +31,7 @@ def query_chroma_db(query_text, top_k=1):
 print("Time took to load db :", timeit.default_timer() - start)
 
 # Example Query
-query_text = "Hi"
+query_text = "scholarships"
 start = timeit.default_timer()
-for i in range(10):
-    query_chroma_db(query_text)
-    print("Time took to get answer is :", timeit.default_timer() - start)
+query_chroma_db(query_text)
+print("Time took to get answer is :", timeit.default_timer() - start)
