@@ -6,21 +6,21 @@ import spacy
 nlp = spacy.load("en_core_web_sm")
 
 # Load the Excel file
-excel_file = "./docs/general_qnas.xlsx"  # Change this to your file path
+excel_file = "./docs/dual_qnas.xlsx"  # Change this to your file path
 df = pd.read_excel(excel_file)
 
 # Initialize ChromaDB client (Persistent storage)
 chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
 
 # Create or get a collection
-collection = chroma_client.get_or_create_collection(name="general")
+collection = chroma_client.get_or_create_collection(name="dual")
 
 # Initialize embedding model
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 def preprocess_query(query):
     doc = nlp(query) # Use spaCy for better tokenization
-    tokens = [token.text for token in doc] #Extract text from tokens
+    tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and not token.is_space] #Extract text from tokens
     tokens.sort()
     return " ".join(tokens)  # Or join with any other separator
 
@@ -29,8 +29,9 @@ def store_questions():
     for index, row in df.iterrows():
         question = str(row["Question"]).strip()
         answer = str(row["Answer"]).strip()
+
         question = preprocess_query(question)
-        # print(question, question1)
+        #print(question, question1)
 
         if question and answer:  # Ensure non-empty questions/answers
             embedding = embedding_model.encode(question).tolist()

@@ -6,14 +6,14 @@ import spacy
 nlp = spacy.load("en_core_web_sm")
 
 # Load the Excel file
-excel_file = "./docs/scholarship_dual_qnas_v1.xlsx"  # Change this to your file path
+excel_file = "./docs/scholarship_qnas.xlsx"  # Change this to your file path
 df = pd.read_excel(excel_file)
 
 # Initialize ChromaDB client (Persistent storage)
-chroma_client = chromadb.PersistentClient(path="./scholarship_dual_chroma_db")
+chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
 
 # Create or get a collection
-collection = chroma_client.get_or_create_collection(name="qa_collection")
+collection = chroma_client.get_or_create_collection(name="scholarship")
 
 # Initialize embedding model
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
