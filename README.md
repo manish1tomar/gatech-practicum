@@ -3,6 +3,8 @@
 ### Install Ollama
 ### ![image](https://github.com/user-attachments/assets/cf107f54-c206-459a-9b9a-b847d00ae294)
 
+### ![image](https://github.com/user-attachments/assets/cfb185a8-e98f-4546-bd2d-fcc56702ae4d)
+
 ### pip install chromadb sentence_transformers pillow streamlit spacy pandas
 ### python -m spacy download en_core_web_sm 
 ### cd .\chromadb\
