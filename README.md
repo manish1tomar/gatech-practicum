@@ -7,6 +7,7 @@
 
 ### ![image](https://github.com/user-attachments/assets/7dc995cc-b1a4-43ec-be66-7b9d9fd46a5d)
 
+## Run the below commands in Python env / virtualenv
 ### pip install chromadb sentence_transformers pillow streamlit spacy pandas
 ### python -m spacy download en_core_web_sm 
 ### cd .\chromadb\
