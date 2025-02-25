@@ -27,12 +27,12 @@ if "context" not in st.session_state or st.session_state.context == "initial":
 
 if "context" in st.session_state and st.session_state.context == "scholarship":
     print("loading database scholarship dual")
-    chroma_client = chromadb.PersistentClient(path="./scholarship_dual_chroma_db")
+    chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="scholarship")
 
 if "context" in st.session_state and st.session_state.context == "graduation_requirements":
     print("loading database scholarship dual")
-    chroma_client = chromadb.PersistentClient(path="./graduation_requirements_chroma_db")
+    chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="dual")
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
