@@ -5,6 +5,8 @@
 
 ### ![image](https://github.com/user-attachments/assets/cfb185a8-e98f-4546-bd2d-fcc56702ae4d)
 
+### ![image](https://github.com/user-attachments/assets/7dc995cc-b1a4-43ec-be66-7b9d9fd46a5d)
+
 ### pip install chromadb sentence_transformers pillow streamlit spacy pandas
 ### python -m spacy download en_core_web_sm 
 ### cd .\chromadb\
