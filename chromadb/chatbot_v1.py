@@ -1,4 +1,4 @@
-import os, pyodbc, chromadb, torch, set_env
+import chromadb, torch
 from sentence_transformers import SentenceTransformer
 from PIL import Image
 import streamlit as st
@@ -23,17 +23,17 @@ st.sidebar.image(image, width=700)
 if "context" not in st.session_state or st.session_state.context == "initial":
     print("loading database general")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
-    collection = chroma_client.get_collection(name="qa_collection")
+    collection = chroma_client.get_collection(name="general")
 
 if "context" in st.session_state and st.session_state.context == "scholarship":
     print("loading database scholarship dual")
     chroma_client = chromadb.PersistentClient(path="./scholarship_dual_chroma_db")
-    collection = chroma_client.get_collection(name="qa_collection")
+    collection = chroma_client.get_collection(name="scholarship")
 
 if "context" in st.session_state and st.session_state.context == "graduation_requirements":
     print("loading database scholarship dual")
     chroma_client = chromadb.PersistentClient(path="./graduation_requirements_chroma_db")
-    collection = chroma_client.get_collection(name="qa_collection")
+    collection = chroma_client.get_collection(name="dual")
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -77,15 +77,16 @@ if user_input:
     print(q,"\n", a, "\n", dist)
     if q.lower() == "graduation requirements":
         st.session_state.context = "graduation_requirements"
-    elif q.lower() == "scholarship":
+    elif q.lower() == "scholarships":
         st.session_state.context = "scholarship"
 
     if dist[0][0] > 1:
         chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
-        collection = chroma_client.get_collection(name="qa_collection")
+        collection = chroma_client.get_collection(name="general")
         q, a, dist = query_chroma_db(user_input)
+        st.session_state.context = "initial"
         if dist[0][0] > 1:
-            a = "Sorry, I'm still learning. Can you elaborate your question ? If you dont find an answer, please talk to a counsellor."
+            a = "Sorry, I'm still learning. You can ask like - scholarships, my academic standing, graduation requirements, etc."
 
     st.session_state.messages.append({"role": "assistant", "content": a})
     with st.chat_message("assistant"):
