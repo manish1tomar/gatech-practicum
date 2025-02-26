@@ -2,6 +2,7 @@ import pandas as pd
 import chromadb
 from sentence_transformers import SentenceTransformer
 import spacy
+import ollama
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -18,6 +19,29 @@ collection = chroma_client.get_or_create_collection(name="scholarship")
 # Initialize embedding model
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+def generate_question_variations(model, question, num_variations=10):
+    variations = []
+    for _ in range(num_variations):
+        prompt = f"""Rephrase the following question in a different way, providing only the rephrased question:
+        Original Question: {question}
+        Rephrased Question: """
+        try:
+            response = ollama.chat(
+                model=model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+            )
+            variation = response['message']['content'].strip()
+            variations.append(variation)
+        except Exception as e:
+            print(f"Error generating variation: {e}")
+            return variations
+    return variations
+
 def preprocess_query(query):
     doc = nlp(query) # Use spaCy for better tokenization
     tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and not token.is_space] #Extract text from tokens
@@ -26,22 +50,27 @@ def preprocess_query(query):
 
 def store_questions():
     """Store questions and answers in ChromaDB."""
+    ollama_model = "llama2"
     for index, row in df.iterrows():
         question = str(row["Question"]).strip()
         answer = str(row["Answer"]).strip()
 
-        question = preprocess_query(question)
-        #print(question, question1)
+        question_variations = generate_question_variations(ollama_model, question)
+        question_variations.append(question)
 
-        if question and answer:  # Ensure non-empty questions/answers
-            embedding = embedding_model.encode(question).tolist()
-            collection.add(
-                ids=[f"q_{index}"],
-                embeddings=[embedding],
-                metadatas=[{"question": question, "answer": answer}]
-            )
-            print(f"Stored: {question}")
+        if question_variations:
+            embeddings = [embedding_model.encode(question).tolist()]
+            metadatas = [{"question": question, "answer": answer}]
+            ids = [f"q_{index}_{idx2}" for idx2 in range(len(question_variations)+1)]
 
+            for variation in question_variations:
+                q_v = preprocess_query(variation.replace("rephrased version of the original question:\n\n", ""))
+
+                if q_v and answer:  # Ensure non-empty questions/answers
+                    embeddings.append(embedding_model.encode(q_v).tolist())
+                    metadatas.append({"question": q_v, "answer": answer})
+            collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
+            print(f"Stored: {metadatas}")
 
 # Store the data
 store_questions()

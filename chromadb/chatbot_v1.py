@@ -16,9 +16,11 @@ def preprocess_query(query):
     return " ".join(tokens)  # Or join with any other separator
 
 # Streamlit app
-st.title("GaDOE chatbot - OnePal. Always there for you.")
-image = Image.open('./onePal_image.jpg')
+st.title("FCS chatbot - Guidance Genie. Happy to help.")
+image = Image.open('./Virtual_Guidance_Genie.jpg')
 st.sidebar.image(image, width=700)
+st.sidebar.header("Guidance Genie here, Where students come first !!")
+st.sidebar.subheader("You can ask about scholarships, dual enrollment, my academic standing, graduation requirements, etc.")
 
 if "context" not in st.session_state or st.session_state.context == "initial":
     print("loading database general")
@@ -30,7 +32,7 @@ if "context" in st.session_state and st.session_state.context == "scholarship":
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="scholarship")
 
-if "context" in st.session_state and st.session_state.context == "graduation_requirements":
+if "context" in st.session_state and st.session_state.context == "dual":
     print("loading database scholarship dual")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="dual")
@@ -75,8 +77,8 @@ if user_input:
     print(user_input)
     q, a, dist = query_chroma_db(user_input)
     print(q,"\n", a, "\n", dist)
-    if q.lower() == "graduation requirements":
-        st.session_state.context = "graduation_requirements"
+    if q.lower() == "dual":
+        st.session_state.context = "dual"
     elif q.lower() == "scholarships":
         st.session_state.context = "scholarship"
 
@@ -86,7 +88,7 @@ if user_input:
         q, a, dist = query_chroma_db(user_input)
         st.session_state.context = "initial"
         if dist[0][0] > 1:
-            a = "Sorry, I'm still learning. You can ask like - scholarships, my academic standing, graduation requirements, etc."
+            a = "Sorry, I'm still learning. You can ask like - scholarships, dual enrollment, my academic standing, graduation requirements, etc."
 
     st.session_state.messages.append({"role": "assistant", "content": a})
     with st.chat_message("assistant"):

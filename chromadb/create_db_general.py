@@ -34,11 +34,7 @@ def store_questions():
 
         if question and answer:  # Ensure non-empty questions/answers
             embedding = embedding_model.encode(question).tolist()
-            collection.add(
-                ids=[f"q_{index}"],
-                embeddings=[embedding],
-                metadatas=[{"question": question, "answer": answer}]
-            )
+            collection.add(ids=[f"q_{index}"],embeddings=[embedding], metadatas=[{"question": question, "answer": answer}])
             print(f"Stored: {question}")
 
 
