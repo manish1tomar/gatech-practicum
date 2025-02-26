@@ -1,1 +1,15 @@
 # gatech-practicum
+
+### Install Ollama
+### ![image](https://github.com/user-attachments/assets/cf107f54-c206-459a-9b9a-b847d00ae294)
+
+### ![image](https://github.com/user-attachments/assets/cfb185a8-e98f-4546-bd2d-fcc56702ae4d)
+
+### ![image](https://github.com/user-attachments/assets/7dc995cc-b1a4-43ec-be66-7b9d9fd46a5d)
+
+## Run the below commands in Python env / virtualenv
+### pip install chromadb sentence_transformers pillow streamlit spacy pandas ollama
+### python -m spacy download en_core_web_sm 
+### cd .\chromadb\
+### streamlit run .\chatbot_v1.py
+
