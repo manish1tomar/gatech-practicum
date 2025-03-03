@@ -1,8 +1,9 @@
-import chromadb, torch
+import chromadb, torch, set_env
 from sentence_transformers import SentenceTransformer
 from PIL import Image
 import streamlit as st
-import spacy
+import spacy, pyodbc
+import pandas as pd
 
 torch.classes.__path__ = []
 
@@ -37,9 +38,12 @@ if "context" in st.session_state and st.session_state.context == "dual":
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="dual")
 
-embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+if "context" in st.session_state and st.session_state.context == "academic standing":
+    print("loading SQL Server Student Database")
+    chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
+    collection = chroma_client.get_collection(name="general")
 
-print("start session_state", st.session_state)
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
@@ -49,7 +53,7 @@ def query_chroma_db(query_text, top_k=1):
     query_embedding = embedding_model.encode(query_text).tolist()
     results = collection.query( query_embeddings=[query_embedding], n_results=top_k )
 
-    print(results)
+    #print(results)
     if results["ids"][0]:  # Check if results exist
         for i, doc_id in enumerate(results["ids"][0]):
             answer = results["metadatas"][0][i].get("answer", "No answer found.")
@@ -74,15 +78,36 @@ if user_input:
         st.markdown(user_input)
 
     user_input = preprocess_query(user_input)
-    print(user_input)
+
     q, a, dist = query_chroma_db(user_input)
-    print(q,"\n", a, "\n", dist)
+
     if q.lower() == "dual":
         st.session_state.context = "dual"
+        print("Changed context to dual")
     elif q.lower() == "scholarships":
         st.session_state.context = "scholarship"
+        print("Changed context to scholarship")
+    elif q.lower() == "academic standing":
+        st.session_state.context = "academic standing"
+        print("Changed context to academic standing")
 
-    if dist[0][0] > 1:
+    if st.session_state.context == "academic standing" and "student_id" not in st.session_state and len([int(s) for s in user_input.split() if s.isdigit()]) > 0:
+        st.session_state.student_id = [int(s) for s in user_input.split() if s.isdigit()][0]
+        print(st.session_state.student_id)
+        conn = pyodbc.connect(set_env.conn_str)
+        print("Connected to SQL Server successfully!")
+        cursor = conn.cursor()
+        print("Executing SQL")
+        cursor.execute(f"select Subject, CreditsNeeded, EarnedCredit from [dbo].[Student_Credits] where StudentID in ( ${st.session_state.student_id} ) order by StudentID asc, CreditsNeeded desc, Subject;")
+        rows = cursor.fetchall()
+        columns = [column[0] for column in cursor.description]
+        a = pd.DataFrame.from_records(rows, columns=columns)
+        a = a.reset_index(drop=True)
+        print(type(a))
+        cursor.close()
+        conn.close()
+
+    if dist[0][0] > 1 and st.session_state.context != "academic standing":
         chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
         collection = chroma_client.get_collection(name="general")
         q, a, dist = query_chroma_db(user_input)
@@ -92,4 +117,8 @@ if user_input:
 
     st.session_state.messages.append({"role": "assistant", "content": a})
     with st.chat_message("assistant"):
-        st.markdown(a)
+        if st.session_state.context == "academic standing" and isinstance(a, pd.DataFrame):
+            st.markdown("Your academic standing is:")
+            st.dataframe(a)
+        else:
+            st.markdown(a)
