@@ -43,6 +43,11 @@ if "context" in st.session_state and st.session_state.context == "academic stand
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="general")
 
+if "context" in st.session_state and st.session_state.context == "gradreqs":
+    print("loading SQL Server Student Database")
+    chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
+    collection = chroma_client.get_collection(name="gradreqs")
+
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 if "messages" not in st.session_state:
@@ -90,6 +95,9 @@ if user_input:
     elif q.lower() == "academic standing":
         st.session_state.context = "academic standing"
         print("Changed context to academic standing")
+    elif q.lower() == "graduation":
+        st.session_state.context = "gradreqs"
+        print("Changed context to gradreqs")
 
     if st.session_state.context == "academic standing" and "student_id" not in st.session_state and len([int(s) for s in user_input.split() if s.isdigit()]) > 0:
         st.session_state.student_id = [int(s) for s in user_input.split() if s.isdigit()][0]
