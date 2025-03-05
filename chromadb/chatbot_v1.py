@@ -29,12 +29,12 @@ if "context" not in st.session_state or st.session_state.context == "initial":
     collection = chroma_client.get_collection(name="general")
 
 if "context" in st.session_state and st.session_state.context == "scholarship":
-    print("loading database scholarship dual")
+    print("loading database scholarship")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="scholarship")
 
 if "context" in st.session_state and st.session_state.context == "dual":
-    print("loading database scholarship dual")
+    print("loading database dual")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="dual")
 
@@ -44,7 +44,7 @@ if "context" in st.session_state and st.session_state.context == "academic stand
     collection = chroma_client.get_collection(name="general")
 
 if "context" in st.session_state and st.session_state.context == "gradreqs":
-    print("loading SQL Server Student Database")
+    print("loading database graduation requirements")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="gradreqs")
 
