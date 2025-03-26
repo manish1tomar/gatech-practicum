@@ -41,7 +41,7 @@ if "context" in st.session_state and st.session_state.context == "dual":
 if "context" in st.session_state and st.session_state.context == "academic standing":
     print("loading SQL Server Student Database")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
-    collection = chroma_client.get_collection(name="general")
+    collection = chroma_client.get_collection(name="gradreqs")
 
 if "context" in st.session_state and st.session_state.context == "gradreqs":
     print("loading database graduation requirements")
@@ -85,19 +85,21 @@ if user_input:
     user_input = preprocess_query(user_input)
 
     q, a, dist = query_chroma_db(user_input)
+    print("q.lower()", q.lower(), "dist", dist)
 
-    if q.lower() == "dual":
-        st.session_state.context = "dual"
-        print("Changed context to dual")
-    elif q.lower() == "scholarships":
-        st.session_state.context = "scholarship"
-        print("Changed context to scholarship")
-    elif q.lower() == "academic standing":
-        st.session_state.context = "academic standing"
-        print("Changed context to academic standing")
-    elif q.lower() == "graduation":
-        st.session_state.context = "gradreqs"
-        print("Changed context to gradreqs")
+    if dist[0][0] <= 1:
+        if q.lower() == "dual":
+            st.session_state.context = "dual"
+            print("Changed context to dual")
+        elif q.lower() == "scholarships":
+            st.session_state.context = "scholarship"
+            print("Changed context to scholarship")
+        elif q.lower() == "academic standing":
+            st.session_state.context = "academic standing"
+            print("Changed context to academic standing")
+        elif q.lower() in ["graduation","graduation requirements"]:
+            st.session_state.context = "gradreqs"
+            print("Changed context to gradreqs")
 
     if st.session_state.context == "academic standing" and "student_id" not in st.session_state and len([int(s) for s in user_input.split() if s.isdigit()]) > 0:
         st.session_state.student_id = [int(s) for s in user_input.split() if s.isdigit()][0]
@@ -114,6 +116,8 @@ if user_input:
         print(type(a))
         cursor.close()
         conn.close()
+        st.session_state.context = "gradreqs"
+        print("Changed context to gradreqs - 1")
 
     if dist[0][0] > 1 and st.session_state.context != "academic standing":
         chroma_client = chromadb.PersistentClient(path="./general_chroma_db")

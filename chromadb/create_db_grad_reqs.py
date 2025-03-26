@@ -51,9 +51,22 @@ def preprocess_query(query):
 def store_questions():
     """Store questions and answers in ChromaDB."""
     ollama_model = "llama2"
+    existing_answers = set()
+
+    # Fetch existing questions
+    results = collection.get()
+    if "metadatas" in results:
+        for metadata in results["metadatas"]:
+            existing_answers.add(metadata["answer"])
+
     for index, row in df.iterrows():
         question = str(row["Question"]).strip()
         answer = str(row["Answer"]).strip()
+
+        # Skip if the question if answer already exists
+        if answer in existing_answers and question not in ['What are the English courses I can take ?','What are the maths mathematics courses I can take ?','What are the science courses I can take ?','What are the social science courses I can take ?','What courses focus on world history ?','What courses focus on world studies ?','What courses focus on US history ?','ADDITIONAL COURSES THAT SATISFY THE THIRD SOCIAL SCIENCE UNIT','computer science courses that satisfy the foreign language/american sign language/computer science requirement']:
+            print(f"{question} exists. Continuing with next...")
+            continue
 
         question_variations = generate_question_variations(ollama_model, question)
         question_variations.append(question)
