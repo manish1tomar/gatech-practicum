@@ -21,7 +21,7 @@ st.title("FCS chatbot - Guidance Genie. Happy to help.")
 image = Image.open('./Virtual_Guidance_Genie.jpg')
 st.sidebar.image(image, width=700)
 st.sidebar.header("Guidance Genie here, Where students come first !!")
-st.sidebar.subheader("You can ask about scholarships, dual enrollment, my academic standing, graduation requirements, etc.")
+st.sidebar.subheader("You can ask about scholarships, dual enrollment, AP, my academic standing, graduation requirements, etc.")
 
 if "context" not in st.session_state or st.session_state.context == "initial":
     print("loading database general")
@@ -39,14 +39,19 @@ if "context" in st.session_state and st.session_state.context == "dual":
     collection = chroma_client.get_collection(name="dual")
 
 if "context" in st.session_state and st.session_state.context == "academic standing":
-    print("loading SQL Server Student Database")
+    print("loading database general under context - academic standing")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
-    collection = chroma_client.get_collection(name="gradreqs")
+    collection = chroma_client.get_collection(name="general")
 
 if "context" in st.session_state and st.session_state.context == "gradreqs":
     print("loading database graduation requirements")
     chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
     collection = chroma_client.get_collection(name="gradreqs")
+
+if "context" in st.session_state and st.session_state.context == "counselling":
+    print("loading database counselling")
+    chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
+    collection = chroma_client.get_collection(name="counselling")
 
 embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -88,7 +93,7 @@ if user_input:
     print("q.lower()", q.lower(), "dist", dist)
 
     if dist[0][0] <= 1:
-        if q.lower() == "dual":
+        if q.lower() in ["dual", "ap", "advanced courses"]:
             st.session_state.context = "dual"
             print("Changed context to dual")
         elif q.lower() == "scholarships":
@@ -100,6 +105,9 @@ if user_input:
         elif q.lower() in ["graduation","graduation requirements"]:
             st.session_state.context = "gradreqs"
             print("Changed context to gradreqs")
+        elif q.lower() == "counselling":
+            st.session_state.context = "counselling"
+            print("Changed context to counselling")
 
     if st.session_state.context == "academic standing" and "student_id" not in st.session_state and len([int(s) for s in user_input.split() if s.isdigit()]) > 0:
         st.session_state.student_id = [int(s) for s in user_input.split() if s.isdigit()][0]
@@ -108,8 +116,8 @@ if user_input:
         print("Connected to SQL Server successfully!")
         cursor = conn.cursor()
         print("Executing SQL")
-        cursor.execute(f"select Subject, CreditsNeeded, EarnedCredit from [dbo].[Student_Credits] where StudentID in ( ${st.session_state.student_id} ) and Subject <> 'FL_ASL_CSE' order by StudentID asc, CreditsNeeded desc, Subject;")
-        #cursor.execute(f"SELECT *FROM[dbo].[vw_Student_Credits] WHERE StudentID in ( ${st.session_state.student_id} );")
+        #cursor.execute(f"select Subject, CreditsNeeded, EarnedCredit from [dbo].[Student_Credits] where StudentID in ( ${st.session_state.student_id} ) and Subject <> 'FL_ASL_CSE' order by StudentID asc, CreditsNeeded desc, Subject;")
+        cursor.execute(f"SELECT *FROM[dbo].[vw_Student_Credits] WHERE StudentID in ( ${st.session_state.student_id} );")
         rows = cursor.fetchall()
         columns = [column[0] for column in cursor.description]
         a = pd.DataFrame.from_records(rows, columns=columns)
@@ -122,9 +130,10 @@ if user_input:
         chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
         collection = chroma_client.get_collection(name="general")
         q, a, dist = query_chroma_db(user_input)
+        print("q.lower()", q.lower(), "dist", dist)
         st.session_state.context = "initial"
-        if dist[0][0] > 1:
-            a = "Sorry, I'm still learning. You can ask like - scholarships, dual enrollment, my academic standing, graduation requirements, etc."
+        if dist[0][0] > 1.2:
+            a = "Sorry, I'm still learning. You can ask like - scholarships, dual enrollment, AP, my academic standing, graduation requirements, etc."
 
     st.session_state.messages.append({"role": "assistant", "content": a})
     with st.chat_message("assistant"):
