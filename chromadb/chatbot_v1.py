@@ -108,7 +108,8 @@ if user_input:
         print("Connected to SQL Server successfully!")
         cursor = conn.cursor()
         print("Executing SQL")
-        cursor.execute(f"select Subject, CreditsNeeded, EarnedCredit from [dbo].[Student_Credits] where StudentID in ( ${st.session_state.student_id} ) order by StudentID asc, CreditsNeeded desc, Subject;")
+        cursor.execute(f"select Subject, CreditsNeeded, EarnedCredit from [dbo].[Student_Credits] where StudentID in ( ${st.session_state.student_id} ) and Subject <> 'FL_ASL_CSE' order by StudentID asc, CreditsNeeded desc, Subject;")
+        #cursor.execute(f"SELECT *FROM[dbo].[vw_Student_Credits] WHERE StudentID in ( ${st.session_state.student_id} );")
         rows = cursor.fetchall()
         columns = [column[0] for column in cursor.description]
         a = pd.DataFrame.from_records(rows, columns=columns)
@@ -116,8 +117,6 @@ if user_input:
         print(type(a))
         cursor.close()
         conn.close()
-        st.session_state.context = "gradreqs"
-        print("Changed context to gradreqs - 1")
 
     if dist[0][0] > 1 and st.session_state.context != "academic standing":
         chroma_client = chromadb.PersistentClient(path="./general_chroma_db")
