@@ -21,7 +21,7 @@ st.title("FCS chatbot - Guidance Genie. Happy to help.")
 image = Image.open('./Virtual_Guidance_Genie.jpg')
 st.sidebar.image(image, width=700)
 st.sidebar.header("Guidance Genie here, Where students come first !!")
-st.sidebar.subheader("You can ask about scholarships, dual enrollment, AP, my academic standing, graduation requirements, etc.")
+st.sidebar.subheader("You can ask about scholarships, counselling, dual enrollment, AP, my academic standing, graduation requirements, etc.")
 
 if "context" not in st.session_state or st.session_state.context == "initial":
     print("loading database general")
@@ -133,7 +133,7 @@ if user_input:
         print("q.lower()", q.lower(), "dist", dist)
         st.session_state.context = "initial"
         if dist[0][0] > 1.2:
-            a = "Sorry, I'm still learning. You can ask like - scholarships, dual enrollment, AP, my academic standing, graduation requirements, etc."
+            a = "Sorry, I'm still learning. You can ask like - scholarships, counselling, dual enrollment, AP, my academic standing, graduation requirements, etc."
 
     st.session_state.messages.append({"role": "assistant", "content": a})
     with st.chat_message("assistant"):
