@@ -2,11 +2,10 @@
 Project Setup
 1. Unzip the file provided.
 2. Verify the directory structure
-    ###gatech-practicum
-       ####-> chromadb
-       #####   ->  docs
-       #####   ->  general_chroma_db
-       ####-> readme.md
+    gatech-practicum -> chromadb
+    gatech-practicum -> chromadb -> docs
+    gatech-practicum -> chromadb -> general_chroma_db
+    gatech-practicum -> readme.md
 
 SQL Server Setup
 1. Execute the sql script chromadb/sql/scripts/create_fcsdb_objects_ddl.sql
