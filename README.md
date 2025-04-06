@@ -3,8 +3,11 @@ Project Setup
 1. Unzip the file provided.
 2. Verify the directory structure
     gatech-practicum -> chromadb
+   
     gatech-practicum -> chromadb -> docs
+   
     gatech-practicum -> chromadb -> general_chroma_db
+   
     gatech-practicum -> readme.md
 
 SQL Server Setup
