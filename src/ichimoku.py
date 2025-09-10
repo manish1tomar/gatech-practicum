@@ -36,13 +36,13 @@ import ccxt
 # --------------------- Config ---------------------
 SYMBOL = "XRP/USD"            # Crypto.com spot symbol via CCXT
 AMOUNT = 260                  # Buy exactly 1 XRP
-TIMEFRAME = "15m"              # Candle timeframe used for Ichimoku
+TIMEFRAME = "5m"              # Candle timeframe used for Ichimoku
 CANDLE_LIMIT = 300            # Fetch enough candles for Ichimoku (>= 78)
 POLL_INTERVAL = 60            # seconds, re-check Ichimoku conditions
 STOP_MONITOR_INTERVAL = 5     # seconds, for fallback stop monitoring
 
-API_KEY = os.getenv("CRYPTOCOM_API_KEY", "oER5Gcykjw7YRh542EkM5B")
-API_SECRET = os.getenv("CRYPTOCOM_API_SECRET", "cxakp_E3TQJPUHhYtWMn7JwhmCq8")
+API_KEY = os.getenv("CRYPTOCOM_API_KEY", "eRUhcDv9E7UGD7L1mwxSw2")
+API_SECRET = os.getenv("CRYPTOCOM_API_SECRET", "cxakp_cm7Hfn2p5vUSEhZmdVMcj5")
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
 DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "false"
 
@@ -103,6 +103,7 @@ def ichimoku_buy_conditions(df: pd.DataFrame) -> Tuple[bool, IchimokuValues, flo
     tenkan_above_kijun = values.tenkan > values.kijun
     recent_cloud_green = values.senkou_a_now > values.senkou_b_now
     chikou_above_cloud = values.chikou_vs_cloud_ok
+    price_above_tenkan = (math.floor(last_close * 100.0) / 100.0) > values.tenkan
 
     if not price_above_cloud:
         print("Price below cloud")
@@ -112,8 +113,10 @@ def ichimoku_buy_conditions(df: pd.DataFrame) -> Tuple[bool, IchimokuValues, flo
         print("Cloud is Red")
     if not chikou_above_cloud:
         print("Lagging Green is below/under cloud")
+    if not price_above_tenkan:
+        print("Price below blue/tenkan line/sen")
 
-    all_ok = price_above_cloud and tenkan_above_kijun and recent_cloud_green and chikou_above_cloud
+    all_ok = price_above_cloud and tenkan_above_kijun and recent_cloud_green and chikou_above_cloud and price_above_tenkan
 
     stop_loss = math.floor(values.kijun * 100.0) / 100.0
 

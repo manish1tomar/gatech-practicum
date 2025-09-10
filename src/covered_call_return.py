@@ -40,7 +40,10 @@ portfolio = {
     "APLD":100, "CELH":100, "DUOL":100, "V":100, "AAPL":100, "JPM":100, "C":100, "VZ":100, "RKLB":100, "ASTS":100, "EOG":100,
     "BROS":100, "ABCL":100, "MRVL":100, "AXON":100, "ELF":100, "ORCL":100, "CSCO":100, "LLY":100, "NVO":100, "TTWO":100,
     "META":100, "CRWD":100, "NFLX":100, "CRM":100, "PYPL":100, "MU":100, "NU":100, "NOW":100, "MELI":100, "SHOP":100, "TTD":100,
-    "TSM":100, "LULU":100, "RDDT":100, "TSLA":100, "SOUN":100, "TGT":100,
+    "TSM":100, "LULU":100, "RDDT":100, "TSLA":100, "SOUN":100, "TGT":100, "RGTI":100,"ZM":100,"TLRY":100,"SG":100,"ACHR":100,
+    "SHOP":100,"DELL":100,"MDB":100, "OKTA":100, "GS":100,"VST":100,"SQQQ":100,"SSYS":100,"QUBT":100, "IONQ":100,"APTV":100,"AI":100,"FIG":100,
+    "AEO":100,"DOCU":100,"ACGL":100,"B":100,"RGLD":100, "ARHS":100, "CROX":100,"BLDR":100,"GPN":100,"ODP":100,"TLN":100,"CEG":100,"VST":100,
+    "ADBE":100,"STZ":100,"FIVE":100,"FMX":100,"IREN":100,
 }
 
 def get_atm_call_yield(ticker, shares, target_expiry):
@@ -60,7 +63,7 @@ def get_atm_call_yield(ticker, shares, target_expiry):
     premium = (atm_call["bid"] + atm_call["ask"]) / 2
     expiry_date = datetime.datetime.strptime(target_expiry, "%Y-%m-%d").date()
     days_to_expiry = (expiry_date - datetime.date.today()).days
-    yield_pct = (premium / price) * 100
+    yield_pct = ((premium + atm_call["strike"] - price) / price) * 100
     annualized_yield = yield_pct * (365 / days_to_expiry) if days_to_expiry > 0 else 0
 
     return {

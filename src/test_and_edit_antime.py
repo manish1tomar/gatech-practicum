@@ -1,11 +1,21 @@
-import ccxt
+'''import ccxt
 
 exchange = ccxt.cryptocom({
-    "apiKey": "oER5Gcykjw7YRh542EkM5B",
-    "secret": "cxakp_E3TQJPUHhYtWMn7JwhmCq8",
-    "enableRateLimit": True,
+    "apiKey": "eRUhcDv9E7UGD7L1mwxSw2",
+    "secret": "cxakp_cm7Hfn2p5vUSEhZmdVMcj5",
 })
 
 print('crypto' in ccxt.exchanges)
 print('cryptocom' in ccxt.exchanges)
 print(exchange.fetch_balance())
+
+order = exchange.create_market_buy_order("XRP/USD", 1)
+print(order)
+'''
+import yfinance as yf
+
+ticker = "AAPL"
+stock = yf.Ticker(ticker)
+insider_df = stock.insider_transactions
+
+print(insider_df)
