@@ -1,8 +1,8 @@
-'''import ccxt
+import ccxt
 
 exchange = ccxt.cryptocom({
-    "apiKey": "eRUhcDv9E7UGD7L1mwxSw2",
-    "secret": "cxakp_cm7Hfn2p5vUSEhZmdVMcj5",
+    "apiKey": "",
+    "secret": "",
 })
 
 print('crypto' in ccxt.exchanges)
@@ -19,3 +19,4 @@ stock = yf.Ticker(ticker)
 insider_df = stock.insider_transactions
 
 print(insider_df)
+'''

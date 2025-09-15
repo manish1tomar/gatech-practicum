@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
 """
-Buy 1 XRP/USD on Crypto.com when Ichimoku conditions are met, then place a stop loss
-at the Kijun-sen ("red line") rounded DOWN to one decimal place.
+Ichimoku-based trading bot for XRP/USD on Crypto.com
 
-Now modified to:
-- Check conditions every 60 seconds.
-- Continuously update the stop price with the latest Ichimoku values.
+Enhancements:
+- Keeps trading repeatedly whenever entry conditions reoccur.
+- Stops trading permanently when cumulative loss reaches $15.
 
 Requirements:
   pip install ccxt pandas numpy python-dotenv
-
-Environment variables (or replace inline):
-  CRYPTOCOM_API_KEY
-  CRYPTOCOM_API_SECRET
-  DRY_RUN=true   # set to 'false' to actually place orders
-
-Notes:
-- Timeframe is 1h by default; you can change TIMEFRAME.
-- This script uses CCXT's unified API for Crypto.com (exchange id: 'cryptocom').
-- Stop-loss placement is enforced by a fallback monitor (no native API stop support).
-- Example code for educational purposes; use at your own risk.
 """
-from __future__ import annotations
+
 import os
 import time
 import math
@@ -34,21 +22,25 @@ import pandas as pd
 import ccxt
 
 # --------------------- Config ---------------------
-SYMBOL = "XRP/USD"            # Crypto.com spot symbol via CCXT
-AMOUNT = 260                  # Buy exactly 1 XRP
-TIMEFRAME = "5m"              # Candle timeframe used for Ichimoku
-CANDLE_LIMIT = 300            # Fetch enough candles for Ichimoku (>= 78)
-POLL_INTERVAL = 60            # seconds, re-check Ichimoku conditions
-STOP_MONITOR_INTERVAL = 5     # seconds, for fallback stop monitoring
+SYMBOL = "XRP/USD"
+AMOUNT = 275              # quantity of XRP to buy each trade
+TIMEFRAME = "2h"
+CANDLE_LIMIT = 300
+POLL_INTERVAL = 60
+STOP_MONITOR_INTERVAL = 5
 
-API_KEY = os.getenv("CRYPTOCOM_API_KEY", "eRUhcDv9E7UGD7L1mwxSw2")
-API_SECRET = os.getenv("CRYPTOCOM_API_SECRET", "cxakp_cm7Hfn2p5vUSEhZmdVMcj5")
-DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "true"
-DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "false"
+API_KEY = os.getenv("CRYPTOCOM_API_KEY", "")
+API_SECRET = os.getenv("CRYPTOCOM_API_SECRET", "")
+DRY_RUN = os.getenv("DRY_RUN", "true").lower() == "false"   # false = dry-run
+
+# Global P&L tracker
+TOTAL_LOSS_LIMIT = 15.0
+total_loss = 0.0
+
 
 def alarm():
-    # Frequency = 1000 Hz, Duration = 1000 ms (1 second)
     winsound.Beep(1000, 1000)
+
 
 # ---------------- Ichimoku helpers ----------------
 @dataclass
@@ -83,7 +75,6 @@ def ichimoku(df: pd.DataFrame) -> IchimokuValues:
     close_26_back = float(closes.iloc[chikou_idx])
     span_a_26_back = float(span_a.iloc[chikou_idx])
     span_b_26_back = float(span_b.iloc[chikou_idx])
-    print("chikou_ok", close_26_back, "cloud", max(span_a_26_back, span_b_26_back))
     chikou_ok = close_26_back > max(span_a_26_back, span_b_26_back)
 
     return IchimokuValues(
@@ -105,113 +96,112 @@ def ichimoku_buy_conditions(df: pd.DataFrame) -> Tuple[bool, IchimokuValues, flo
     chikou_above_cloud = values.chikou_vs_cloud_ok
     price_above_tenkan = (math.floor(last_close * 100.0) / 100.0) > values.tenkan
 
-    if not price_above_cloud:
-        print("Price below cloud")
-    if not tenkan_above_kijun:
-        print("Blue below Red")
-    if not recent_cloud_green:
-        print("Cloud is Red")
-    if not chikou_above_cloud:
-        print("Lagging Green is below/under cloud")
-    if not price_above_tenkan:
-        print("Price below blue/tenkan line/sen")
+    all_ok = price_above_cloud and tenkan_above_kijun and recent_cloud_green \
+             and chikou_above_cloud and price_above_tenkan
 
-    all_ok = price_above_cloud and tenkan_above_kijun and recent_cloud_green and chikou_above_cloud and price_above_tenkan
-
-    stop_loss = math.floor(values.kijun * 100.0) / 100.0
+    stop_loss = math.floor(values.tenkan * 100.0) / 100.0
 
     return all_ok, values, stop_loss
 
-# ---------------- Exchange helpers ----------------
 
+# ---------------- Exchange helpers ----------------
 def make_exchange() -> ccxt.Exchange:
-    ex = ccxt.cryptocom({
+    return ccxt.cryptocom({
         'apiKey': API_KEY,
         'secret': API_SECRET,
         'enableRateLimit': True,
         'options': {'defaultType': 'spot'},
     })
-    return ex
 
 
 def fetch_ohlcv_df(ex: ccxt.Exchange, symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
     ohlcv = ex.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-    df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    return df
+    return pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
 
 
 def place_market_buy(ex: ccxt.Exchange, symbol: str, amount: float):
     print(f"Placing MARKET BUY {amount} {symbol} ... DRY_RUN={DRY_RUN}")
     if DRY_RUN:
-        return {'id': 'DRY_RUN_BUY', 'info': {'note': 'dry run buy'}}
+        return {'id': 'DRY_RUN_BUY', 'price': 0.50}
     order = ex.create_market_buy_order(symbol, amount)
-    print("Buy order placed:", order.get('id'))
-    return order
+    price = float(order.get('average', 0) or ex.fetch_ticker(symbol)['last'])
+    return {'id': order.get('id'), 'price': price}
 
 
-def dynamic_stop_monitor(ex: ccxt.Exchange, symbol: str, amount: float):
+def place_market_sell(ex: ccxt.Exchange, symbol: str, amount: float):
+    print(f"Selling {amount} {symbol} ... DRY_RUN={DRY_RUN}")
     if DRY_RUN:
-        print("[DRY RUN] Skipping dynamic stop monitor loop.")
-        return
+        return {'id': 'DRY_RUN_SELL', 'price': 0.49}
+    order = ex.create_market_sell_order(symbol, amount)
+    price = float(order.get('average', 0) or ex.fetch_ticker(symbol)['last'])
+    return {'id': order.get('id'), 'price': price}
 
-    print(f"Starting dynamic stop monitor for {symbol} ...")
+
+# ---------------- Trading logic ----------------
+def dynamic_stop_monitor(ex: ccxt.Exchange, symbol: str, amount: float, entry_price: float):
+    """Monitor price and trigger stop-loss. Returns PnL (profit or loss)."""
+    global total_loss
+
+    print(f"Monitoring stop-loss for {symbol} ... Entry={entry_price}")
     while True:
         try:
             df = fetch_ohlcv_df(ex, symbol, TIMEFRAME, CANDLE_LIMIT)
-            _, values, stop_price = ichimoku_buy_conditions(df)
+            _, _, stop_price = ichimoku_buy_conditions(df)
 
             ticker = ex.fetch_ticker(symbol)
-            last = float(ticker['last']) if ticker.get('last') is not None else None
+            last = float(ticker['last']) if ticker.get('last') else None
             if last is None:
                 time.sleep(STOP_MONITOR_INTERVAL)
                 continue
 
-            print(f"[Stop Monitor] Last: {last}, Updated stop: {stop_price}")
+            print(f"[Stop Monitor] Last={last}, Stop={stop_price}")
             if last <= stop_price:
-                print(f"Price {last} <= stop {stop_price}. Selling {amount} {symbol} market...")
-                ex.create_market_sell_order(symbol, amount)
-                print("Stop executed via dynamic stop monitor.")
-                break
+                sell_order = place_market_sell(ex, symbol, amount)
+                exit_price = sell_order['price']
+                pnl = (exit_price - entry_price) * amount
+                print(f"Trade closed. PnL={pnl:.2f}")
+                if pnl < 0:
+                    total_loss += abs(pnl)
+                return pnl
             time.sleep(STOP_MONITOR_INTERVAL)
         except Exception as e:
             print("Monitor error:", e)
             time.sleep(STOP_MONITOR_INTERVAL)
 
-# ---------------- Main flow ----------------
 
+# ---------------- Main loop ----------------
 def main():
+    global total_loss
     ex = make_exchange()
-    markets = ex.load_markets()
-    if SYMBOL not in markets:
-        raise RuntimeError(f"Symbol {SYMBOL} not found on Crypto.com. Example available: {list(markets.keys())[:5]}")
+    ex.load_markets()
 
-    while True:
+    while total_loss < TOTAL_LOSS_LIMIT:
         try:
             df = fetch_ohlcv_df(ex, SYMBOL, TIMEFRAME, CANDLE_LIMIT)
             ok, values, stop_price = ichimoku_buy_conditions(df)
             last_close = float(df['close'].iloc[-1])
 
             print("\nChecking conditions...")
-            print("Latest close:", last_close)
-            print("Tenkan (conv):", values.tenkan)
-            print("Kijun  (base):", values.kijun)
-            print("SenkouA now  :", values.senkou_a_now)
-            print("SenkouB now  :", values.senkou_b_now)
-            print("Chikou>cloud :", values.chikou_vs_cloud_ok)
-            print("Stop-loss @  :", stop_price)
+            print(f"Latest close={last_close}, Tenkan={values.tenkan}, Kijun={values.kijun}, Stop={stop_price}")
 
             if ok:
-                print("All Ichimoku conditions satisfied. Proceeding to buy...")
+                print("Conditions satisfied. Buying...")
                 order = place_market_buy(ex, SYMBOL, AMOUNT)
+                entry_price = order['price']
                 alarm()
-                dynamic_stop_monitor(ex, SYMBOL, AMOUNT)
-                break  # exit loop after trade completes
+                pnl = dynamic_stop_monitor(ex, SYMBOL, AMOUNT, entry_price)
+                print(f"Total cumulative loss so far: {total_loss:.2f}")
+
             else:
-                print("Conditions NOT met. Will check again in", POLL_INTERVAL, "seconds.")
+                print(f"Conditions NOT met. Sleeping {POLL_INTERVAL}s")
                 time.sleep(POLL_INTERVAL)
+
         except Exception as e:
             print("Error during loop:", e)
             time.sleep(POLL_INTERVAL)
+
+    print(f"Stopping trading. Cumulative loss reached {total_loss:.2f}")
+
 
 if __name__ == "__main__":
     main()
