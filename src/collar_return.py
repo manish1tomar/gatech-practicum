@@ -30,8 +30,10 @@ def get_collar_yield(ticker, shares, target_expiry, protection=0.95):
     ntm_put = puts.loc[puts["diff"].idxmin()]
 
     # Premiums
-    call_premium = (atm_call["bid"] + atm_call["ask"]) / 2
-    put_premium = (ntm_put["bid"] + ntm_put["ask"]) / 2
+    #call_premium = (atm_call["bid"] + atm_call["ask"]) / 2
+    #put_premium = (ntm_put["bid"] + ntm_put["ask"]) / 2
+    call_premium = atm_call["bid"]
+    put_premium = ntm_put["ask"]
 
     expiry_date = datetime.datetime.strptime(target_expiry, "%Y-%m-%d").date()
     days_to_expiry = (expiry_date - datetime.date.today()).days
@@ -144,19 +146,75 @@ def save_to_excel(portfolio, expiries, protections=[0.90, 0.95, 0.98], filename=
 if __name__ == "__main__":
     # Define portfolio (multiples of 100 shares)
     portfolio = {
-        "BMNR": 100, "PLTR": 100, "ANET": 100, "ALAB": 100, "AMAT": 100, "SBET": 100, "NGD": 100, "OPEN": 100, "HOOD": 100,
+        "BMNR": 100, "PLTR": 100, "ANET": 100, "ALAB": 100, "AMAT": 100, "SBET": 100, "NGD": 100, "OPEN": 100,
+        "HOOD": 100,
         "JOBY": 100, "SOFI": 100, "QS": 100, "VRT": 100, "E": 100, "AMD": 100, "NVDA": 100, "AVGO": 100,
         "COIN": 100, "GRAB": 100, "CRWV": 100, "INTC": 100, "NIO": 100, "HD": 100, "ETHA": 100, "VVPR": 100,
         "HIMS": 100, "ENPH": 100, "PANW": 100, "MSFT": 100, "MSTR": 100, "IBIT": 100, "GOOGL": 100, "AMZN": 100,
-        "RUN": 100, "LLY": 100, "UNH": 100, "KWEB": 100, "SLV": 100, "NIO": 100, "OSCR": 100, "CRCL": 100, "BBAI": 100, "AFRM": 100,
-        "SPY": 100, "NBIS": 100, "RICK": 100, "RKLB": 100, 'VKTX': 100, "APP": 100, "APLD": 100, "CELH": 100, "DUOL": 100, "V": 100, "AAPL": 100, "JPM": 100, "C": 100, "VZ": 100, "RKLB": 100,
-        "ASTS": 100, "EOG": 100, "BROS": 100, "ABCL": 100, "MRVL": 100, "AXON": 100, "ELF": 100, "ORCL": 100, "CSCO": 100, "LLY": 100,
-        "NVO": 100, "TTWO": 100, "META": 100, "CRWD": 100, "NFLX": 100, "CRM": 100, "PYPL": 100, "MU": 100, "NU": 100, "NOW": 100, "MELI": 100,
-        "SHOP": 100, "TTD": 100, "TSM": 100, "LULU": 100, "RDDT": 100, "TSLA": 100, "SOUN": 100, "TGT": 100, "RGTI": 100, "ZM": 100, "TLRY": 100,
-        "SG": 100, "ACHR": 100, "SHOP": 100, "DELL": 100, "MDB": 100, "OKTA": 100, "GS": 100, "VST": 100, "SQQQ": 100, "SSYS": 100, "QUBT": 100,
-        "IONQ": 100, "APTV": 100, "AI": 100, "FIG": 100, "AEO": 100, "DOCU": 100, "ACGL": 100, "B": 100, "RGLD": 100, "ARHS": 100, "CROX": 100, "BLDR": 100, "GPN": 100,
-        "ODP": 100, "TLN": 100, "CEG": 100, "VST": 100, "ADBE": 100, "STZ": 100, "FIVE": 100, "FMX": 100,"IREN":100, "SOXL":100,
-        "ROBN":100, "NVDL":100, "ERO":100, "SAND":100, "LCID":100,"DLO":100,
+        "RUN": 100, "LLY": 100, "UNH": 100, "KWEB": 100, "SLV": 100, "NIO": 100, "OSCR": 100, "CRCL": 100, "BBAI": 100,
+        "AFRM": 100,
+        "SPY": 100, "NBIS": 100, "RICK": 100, "RKLB": 100, 'VKTX': 100, "APP": 100, "APLD": 100, "CELH": 100,
+        "DUOL": 100, "V": 100, "AAPL": 100, "JPM": 100, "C": 100, "VZ": 100, "RKLB": 100,
+        "ASTS": 100, "EOG": 100, "BROS": 100, "ABCL": 100, "MRVL": 100, "AXON": 100, "ELF": 100, "ORCL": 100,
+        "CSCO": 100, "LLY": 100,
+        "NVO": 100, "TTWO": 100, "META": 100, "CRWD": 100, "NFLX": 100, "CRM": 100, "PYPL": 100, "MU": 100, "NU": 100,
+        "NOW": 100, "MELI": 100,
+        "SHOP": 100, "TTD": 100, "TSM": 100, "LULU": 100, "RDDT": 100, "TSLA": 100, "SOUN": 100, "TGT": 100,
+        "RGTI": 100, "ZM": 100, "TLRY": 100,
+        "SG": 100, "ACHR": 100, "SHOP": 100, "DELL": 100, "MDB": 100, "OKTA": 100, "GS": 100, "VST": 100, "SQQQ": 100,
+        "SSYS": 100, "QUBT": 100,
+        "IONQ": 100, "APTV": 100, "AI": 100, "FIG": 100, "AEO": 100, "DOCU": 100, "ACGL": 100, "B": 100, "RGLD": 100,
+        "ARHS": 100, "CROX": 100, "BLDR": 100, "GPN": 100,
+        "ODP": 100, "TLN": 100, "CEG": 100, "VST": 100, "ADBE": 100, "STZ": 100, "FIVE": 100, "FMX": 100, "IREN": 100,
+        "SOXL": 100,
+        "ROBN": 100, "NVDL": 100, "ERO": 100, "SAND": 100, "LCID": 100, "DLO": 100, "TSLL": 100, 'NVO': 100, "OKLO": 100
+        , 'ARHS': 100, "PLUG": 100, "INTC": 100, "FN": 100, "U": 100, "SNDK": 100, "MANH": 100, "LITE": 100,
+        "CRDO": 100, "FLEX": 100, "GWRE": 100
+        , 'FNF': 100, "CIEN": 100, "TPR": 100
+        , 'NBXG': 100
+        , 'NAC': 100
+        , 'BMEZ': 100
+        , 'MEGI': 100
+        , 'CROX': 100
+        , 'BLDR': 100
+        , 'FCFS': 100
+        , 'AR': 100
+        , 'APD': 100
+        , 'LB': 100
+        , 'UGI': 100
+        , 'FIX': 100
+        , 'HSY': 100
+        , 'MSFT': 100
+        , 'MCD': 100
+        , 'AXP': 100
+        , 'EA': 100
+        , 'AZO': 100
+        , 'ASML': 100
+        , 'COKE': 100
+        , 'GOOGL': 100
+        , 'GIB': 100
+        , 'GPN': 100
+        , 'CBOE': 100
+        , 'LNSTY': 100
+        , 'ICE': 100
+        , 'CME': 100
+        , 'ZM': 100
+        , 'ADBE': 100
+        , 'QLYS': 100
+        , 'SEMR': 100
+        , 'WRB': 100
+        , 'AFG': 100
+        , 'TRV': 100
+        , 'RNR': 100
+        , 'BRK-B': 100
+        , 'MKL': 100
+        , 'ACGL': 100
+        , 'ACGL': 100
+        , 'V': 100
+        , 'B': 100
+        , 'CTRA': 100
+        , 'FRU.TO': 100
+        , 'VNOM': 100
     }
 
     #portfolio = {"TLRY":100,"QS":100}
