@@ -6,7 +6,7 @@ import psutil
 import subprocess
 import sys
 
-output_file = "covered_call_yields.xlsx"
+output_file = "credit_spreads.xlsx"
 
 # --- Kill Excel if file is open ---
 def close_excel_if_open(filename):
@@ -50,7 +50,7 @@ portfolio = {
         "ROBN": 100, "NVDL": 100, "ERO": 100, "SAND": 100, "LCID": 100, "DLO": 100, "TSLL": 100, 'NVO': 100, "OKLO": 100
         , 'ARHS': 100, "PLUG": 100, "INTC": 100, "FN": 100, "U": 100, "SNDK": 100, "MANH": 100, "LITE": 100,
         "CRDO": 100, "FLEX": 100, "GWRE": 100
-        , 'FNF': 100, "CIEN": 100, "TPR": 100, "QTUM":100
+        , 'FNF': 100, "CIEN": 100, "TPR": 100
         , 'NBXG': 100
         , 'NAC': 100
         , 'BMEZ': 100
@@ -97,149 +97,104 @@ portfolio = {
         , 'VNOM': 100
     }
 
-def get_atm_call_yield(ticker, shares, target_expiry):
+def get_credit_spread(ticker, shares):
     stock = yf.Ticker(ticker)
     price = stock.history(period="1d")["Close"].iloc[-1]
 
     expirations = stock.options
-    if target_expiry not in expirations:
+    if not expirations:
         return None
 
-    opt_chain = stock.option_chain(target_expiry)
-    calls = opt_chain.calls
-    calls["diff"] = abs(calls["strike"] - price)
-    atm_call = calls.loc[calls["diff"].idxmin()]
+    today = datetime.date.today()
 
-    premium = atm_call["ask"]
-    expiry_date = datetime.datetime.strptime(target_expiry, "%Y-%m-%d").date()
-    days_to_expiry = (expiry_date - datetime.date.today()).days
-    yield_pct = ((premium + atm_call["strike"] - price) / price) * 100
-    annualized_yield = yield_pct * (365 / days_to_expiry) if days_to_expiry > 0 else 0
+    # --- Find 12M expiry ---
+    twelve_months = today + datetime.timedelta(days=365)
+    exp_12m = None
+    for d in expirations:
+        if d >= twelve_months.strftime("%Y-%m-%d"):
+            exp_12m = d
+            break
+    if not exp_12m:
+        exp_12m = expirations[-1]
+
+    # --- Find 3M expiry ---
+    three_months = today + datetime.timedelta(days=90)
+    exp_3m = None
+    for d in expirations:
+        if d >= three_months.strftime("%Y-%m-%d"):
+            exp_3m = d
+            break
+    if not exp_3m:
+        exp_3m = expirations[-1]
+
+    # --- Get option chains ---
+    long_calls = stock.option_chain(exp_12m).calls
+    short_calls = stock.option_chain(exp_3m).calls
+
+    if long_calls.empty or short_calls.empty:
+        return None
+
+    # crude proxy for ~0.7 delta: closest ITM strike
+    long_calls["moneyness"] = long_calls["strike"] / price
+    long_calls["diff70"] = abs(long_calls["moneyness"] - 1.0)
+    long_opt = long_calls.loc[long_calls["diff70"].idxmin()]
+
+    long_strike = long_opt["strike"]
+    long_premium = long_opt["ask"]
+
+    # short strike = nearest strike ABOVE (long_strike + long_premium)
+    target_strike = long_strike + long_premium
+    short_calls_above = short_calls[short_calls["strike"] >= target_strike]
+
+    if short_calls_above.empty:
+        short_opt = short_calls.iloc[-1]  # fallback: highest strike available
+    else:
+        short_opt = short_calls_above.iloc[0]
+
+    short_strike = short_opt["strike"]
+    short_premium = short_opt["bid"]
+
+    net_credit = short_premium - long_premium
+    return_pct = (short_premium / long_premium * 100) if long_premium > 0 else None
 
     return {
         "Ticker": ticker,
         "Stock Price": round(price, 2),
-        "ATM Strike": atm_call["strike"],
-        "Premium": round(premium, 2),
-        "Expiry": target_expiry,
-        "Days to Expiry": days_to_expiry,
-        "Yield %": round(yield_pct, 2),
-        "Annualized Yield %": round(annualized_yield, 2),
-        "Stock Value": round(price * shares, 2),
-        "Premium Income": round(premium * (shares // 100), 2),
+        "Long Expiry": exp_12m,
+        "Long Strike (~0.7Δ)": long_strike,
+        "Long Premium Paid": round(long_premium, 2),
+        "Short Expiry": exp_3m,
+        "Short Strike (≥ L+P)": short_strike,
+        "Short Premium Received": round(short_premium, 2),
+        "Net Credit (Credit>0)": round(net_credit, 2),
+        "Return %": round(return_pct, 2) if return_pct else 0
     }
 
-def build_dataframe(portfolio, expiry_date):
+def build_dataframe(portfolio):
     results = []
-    total_stock_value, total_premium = 0, 0
-
     for ticker, shares in portfolio.items():
-        print(ticker, expiry_date)
-        try:
-            res = get_atm_call_yield(ticker, shares, expiry_date)
-        except:
-            print("Error Occurred.")
-
+        print("Processing", ticker)
+        res = get_credit_spread(ticker, shares)
         if res:
             results.append(res)
-            total_stock_value += res["Stock Value"]
-            total_premium += res["Premium Income"]
 
     df = pd.DataFrame(results)
 
-    if total_stock_value > 0:
-        totals = {
-            "Ticker": "TOTAL",
-            "Stock Price": "",
-            "ATM Strike": "",
-            "Premium": "",
-            "Expiry": "",
-            "Days to Expiry": "",
-            "Yield %": round((total_premium / total_stock_value) * 100, 2),
-            "Annualized Yield %": "",
-            "Stock Value": round(total_stock_value, 2),
-            "Premium Income": round(total_premium, 2),
-        }
-        df = df.sort_values(by="Yield %", ascending=False)
-        df = pd.concat([df, pd.DataFrame([totals])], ignore_index=True)
-
+    # sort descending by Return %
+    df = df.sort_values(by="Return %", ascending=False)
     return df
 
-# --- Find next 3 Fridays ---
-today = datetime.date.today()
-fridays = []
-for i in range(3):
-    days_ahead = (4 - today.weekday()) % 7
-    friday = today + datetime.timedelta(days=days_ahead + 7 * i)
-    fridays.append(friday.strftime("%Y-%m-%d"))
-
-# --- Find 2-month expiry ---
-two_months = today + datetime.timedelta(days=60)
-two_months_str = two_months.strftime("%Y-%m-%d")
-
-# --- Find 3-month expiry ---
-three_months = today + datetime.timedelta(days=90)
-three_months_str = three_months.strftime("%Y-%m-%d")
-
-# pick a representative ticker to fetch expirations
-sample_ticker = yf.Ticker("AAPL")
-expiries = sample_ticker.options
-
-if two_months_str in expiries:
-    final_2m_expiry = two_months_str
-else:
-    # fallback: pick last expiry in the same YYYY-MM month
-    same_month_expiries = [d for d in expiries if d.startswith(two_months.strftime("%Y-%m"))]
-    if same_month_expiries:
-        final_2m_expiry = same_month_expiries[-1]
-    else:
-        # fallback: just pick the nearest available after 90 days
-        later = [d for d in expiries if d > two_months_str]
-        final_2m_expiry = later[0] if later else expiries[-1]
-
-print("📅 Target Expirations:", fridays + [final_2m_expiry])
-
-if three_months_str in expiries:
-    final_3m_expiry = three_months_str
-else:
-    # fallback: pick last expiry in the same YYYY-MM month
-    same_month_expiries = [d for d in expiries if d.startswith(three_months.strftime("%Y-%m"))]
-    if same_month_expiries:
-        final_3m_expiry = same_month_expiries[-1]
-    else:
-        # fallback: just pick the nearest available after 90 days
-        later = [d for d in expiries if d > three_months_str]
-        final_3m_expiry = later[0] if later else expiries[-1]
-
-print("📅 Target Expirations:", fridays + [final_3m_expiry])
-
-# --- Build DataFrames ---
-dataframes = {}
-for i, f in enumerate(fridays):
-    df = build_dataframe(portfolio, f)
-    if not df.empty:
-        sheet_name = f"Week_{i+1}_{f}"
-        dataframes[sheet_name] = df
-
-# Add 2-month expiry sheet
-df_2m = build_dataframe(portfolio, final_2m_expiry)
-if not df_2m.empty:
-    dataframes[f"3M_{final_2m_expiry}"] = df_2m
-
-# Add 3-month expiry sheet
-df_3m = build_dataframe(portfolio, final_3m_expiry)
-if not df_3m.empty:
-    dataframes[f"3M_{final_3m_expiry}"] = df_3m
+# --- Build Data ---
+df = build_dataframe(portfolio)
 
 # --- Close Excel if open ---
 close_excel_if_open(os.path.abspath(output_file))
 
-# --- Save to multiple sheets ---
+# --- Save to Excel ---
 with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-    for sheet, df in dataframes.items():
-        df.to_excel(writer, index=False, sheet_name=sheet)
+    df.to_excel(writer, index=False, sheet_name="CreditSpreads")
 
-print(f"\n✅ Exported to {output_file} with {len(dataframes)} sheets")
+print(f"\n✅ Exported to {output_file} with {len(df)} tickers")
 
 # --- Open Excel file ---
 if sys.platform.startswith("win"):

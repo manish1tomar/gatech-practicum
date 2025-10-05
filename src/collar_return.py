@@ -30,8 +30,6 @@ def get_collar_yield(ticker, shares, target_expiry, protection=0.95):
     ntm_put = puts.loc[puts["diff"].idxmin()]
 
     # Premiums
-    #call_premium = (atm_call["bid"] + atm_call["ask"]) / 2
-    #put_premium = (ntm_put["bid"] + ntm_put["ask"]) / 2
     call_premium = atm_call["bid"]
     put_premium = ntm_put["ask"]
 
@@ -41,8 +39,7 @@ def get_collar_yield(ticker, shares, target_expiry, protection=0.95):
     # Collar return calculation
     upside = atm_call["strike"] - price if atm_call["strike"] > price else 0
     net_premium = call_premium - put_premium
-    #net_return = (net_premium + upside) / (price+put_premium) * 100
-    net_return = ( (atm_call["strike"] + call_premium) - (price + put_premium) ) / (price + put_premium)
+    net_return = ((atm_call["strike"] + call_premium) - (price + put_premium)) / (price + put_premium)
     max_loss = ((ntm_put["strike"] + call_premium) - (price + put_premium)) / (price + put_premium)
     annualized_return = net_return * (365 / days_to_expiry) if days_to_expiry > 0 else 0
 
@@ -63,7 +60,6 @@ def get_collar_yield(ticker, shares, target_expiry, protection=0.95):
         "Protection Level": f"{int(protection*100)}%"
     }
 
-
 # -------------------------------
 # Build DataFrame for portfolio
 # -------------------------------
@@ -72,12 +68,14 @@ def build_dataframe(portfolio, expiry_date, protection=0.95):
     total_stock_value, total_premium = 0, 0
 
     for ticker, shares in portfolio.items():
-        res = get_collar_yield(ticker, shares, expiry_date, protection=protection)
+        try:
+            res = get_collar_yield(ticker, shares, expiry_date, protection=protection)
+        except:
+            pass
         if res:
             results.append(res)
             total_stock_value += res["Stock Value"]
             total_premium += res["Net Premium Income"]
-            #collar_return = res["Collar Return %"]
 
     df = pd.DataFrame(results)
 
@@ -91,8 +89,7 @@ def build_dataframe(portfolio, expiry_date, protection=0.95):
             "Put Premium": "",
             "Expiry": "",
             "Days to Expiry": "",
-            #"Collar Return %": round((total_premium / total_stock_value) * 100, 2),
-            #"Collar Return %": round(collar_return * 100, 2),
+            "Collar Return %": "",
             "Annualized Return %": "",
             "Stock Value": round(total_stock_value, 2),
             "Net Premium Income": round(total_premium, 2),
@@ -139,15 +136,14 @@ def save_to_excel(portfolio, expiries, protections=[0.90, 0.95, 0.98], filename=
     else:
         subprocess.call(["xdg-open", filename])
 
-
 # -------------------------------
 # Example Run
 # -------------------------------
 if __name__ == "__main__":
-    # Define portfolio (multiples of 100 shares)
+    #portfolio = {"AAPL": 100, "MSFT": 100, "NVDA": 100}
     portfolio = {
         "BMNR": 100, "PLTR": 100, "ANET": 100, "ALAB": 100, "AMAT": 100, "SBET": 100, "NGD": 100, "OPEN": 100,
-        "HOOD": 100,
+        "HOOD": 100, "LAC":100, "NVT":100,
         "JOBY": 100, "SOFI": 100, "QS": 100, "VRT": 100, "E": 100, "AMD": 100, "NVDA": 100, "AVGO": 100,
         "COIN": 100, "GRAB": 100, "CRWV": 100, "INTC": 100, "NIO": 100, "HD": 100, "ETHA": 100, "VVPR": 100,
         "HIMS": 100, "ENPH": 100, "PANW": 100, "MSFT": 100, "MSTR": 100, "IBIT": 100, "GOOGL": 100, "AMZN": 100,
@@ -170,7 +166,7 @@ if __name__ == "__main__":
         "ROBN": 100, "NVDL": 100, "ERO": 100, "SAND": 100, "LCID": 100, "DLO": 100, "TSLL": 100, 'NVO': 100, "OKLO": 100
         , 'ARHS': 100, "PLUG": 100, "INTC": 100, "FN": 100, "U": 100, "SNDK": 100, "MANH": 100, "LITE": 100,
         "CRDO": 100, "FLEX": 100, "GWRE": 100
-        , 'FNF': 100, "CIEN": 100, "TPR": 100
+        , 'FNF': 100, "CIEN": 100, "TPR": 100, "QTUM":100
         , 'NBXG': 100
         , 'NAC': 100
         , 'BMEZ': 100
@@ -214,19 +210,35 @@ if __name__ == "__main__":
         , 'B': 100
         , 'CTRA': 100
         , 'FRU.TO': 100
-        , 'VNOM': 100
+        , 'VNOM': 100, 'CMI':100,
     }
 
-    #portfolio = {"TLRY":100,"QS":100}
-    # --- Close Excel if open ---
     close_excel_if_open(os.path.abspath("collar_strategy.xlsx"))
 
-    # --- Get next 3 expiries dynamically ---
+    # --- Get expiries ---
     first_ticker = list(portfolio.keys())[0]
     stock = yf.Ticker(first_ticker)
     expirations = stock.options
-    next_expiries = expirations[:3]  # next 3 expiries
+
+    # Next 3 expiries
+    next_expiries = list(expirations[:3])
+
+    # Find ~90d expiry (±20)
+    today = datetime.date.today()
+    target_days = 90
+    min_days, max_days = 60, 120
+    chosen_expiry = None
+    for exp in expirations:
+        exp_date = datetime.datetime.strptime(exp, "%Y-%m-%d").date()
+        days = (exp_date - today).days
+        if min_days <= days <= max_days:
+            chosen_expiry = exp
+            break
+
+    # Add to list if found
+    if chosen_expiry and chosen_expiry not in next_expiries:
+        next_expiries.append(chosen_expiry)
+
     print("📅 Target Expirations:", next_expiries)
 
-    # Save results
     save_to_excel(portfolio, next_expiries)
